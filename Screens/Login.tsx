@@ -1,14 +1,3 @@
-/**
- * Login.tsx — Pantalla de inicio de sesión
- *
- * Ideas clave de React Native (parecido a React en web):
- * - Un "componente" es una función que DEVUELVE (return) la interfaz (JSX).
- * - useState guarda valores que pueden cambiar (email, errores). Cuando cambian,
- *   React vuelve a dibujar la pantalla.
- * - Los componentes de RN NO son HTML: <View> ≈ <div>, <Text> ≈ <p>, etc.
- */
-
-// Herramientas para cambiar de pantalla (navegación)
 import { useNavigation } from '@react-navigation/native';
 // Hook de React para estado local (memoria del componente)
 import { useState } from 'react';
