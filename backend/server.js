@@ -135,6 +135,30 @@ app.delete('/api/users/:id', async (req, res) => {
   }
 });
 
+// ====== LOGIN BÁSICO ======
+app.post('/api/login', async (req, res) => {
+  try {
+    const { correo, password } = req.body || {};
+    if (!correo || !password) {
+      return res.status(400).json({ error: 'correo y password son requeridos' });
+    }
+
+    const rows = await query(
+      'SELECT id, nombre, apellido, correo FROM users WHERE correo = ? AND password = ? LIMIT 1',
+      [correo, password]
+    );
+
+    const user = rows?.[0];
+    if (!user) {
+      return res.status(401).json({ error: 'Credenciales inválidas' });
+    }
+
+    res.json({ ok: true, user });
+  } catch (err) {
+    res.status(500).json({ error: 'Error en login', details: String(err.message || err) });
+  }
+});
+
 const PORT = Number(process.env.PORT ?? 3001);
 app.listen(PORT, () => {
   console.log(`Backend escuchando en http://localhost:${PORT}`);

@@ -1,13 +1,3 @@
-// Cliente HTTP para hablar con nuestro backend (Express + MySQL).
-// Ajusta API_BASE_URL según donde esté corriendo tu backend.
-//
-// Para Expo Web en el mismo computador:
-//   http://localhost:3001
-//
-// Para un celular conectado por WiFi (dispositivo físico),
-// usa la IP local de tu Mac:
-//   http://192.168.x.x:3001
-
 export type User = {
   id: number;
   nombre: string;
@@ -32,7 +22,13 @@ export type UserForm = {
   password: string;
 };
 
-const API_BASE_URL = 'http://localhost:3003';
+export type LoginResponse = {
+  ok: boolean;
+  user: User;
+};
+
+const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 async function requestJSON<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
@@ -73,6 +69,13 @@ export function updateUser(id: number, form: UserForm) {
 export function deleteUser(id: number) {
   return requestJSON<{ ok: boolean }>(`/api/users/${id}`, {
     method: 'DELETE',
+  });
+}
+
+export function loginUser(correo: string, password: string) {
+  return requestJSON<LoginResponse>('/api/login', {
+    method: 'POST',
+    body: JSON.stringify({ correo, password }),
   });
 }
 

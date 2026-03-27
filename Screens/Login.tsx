@@ -1,52 +1,44 @@
 import { useNavigation } from '@react-navigation/native';
-// Hook de React para estado local (memoria del componente)
-import { useState } from 'react';
-import {
-    View, // Caja: agrupa otros elementos
-    Text, // Texto (todo texto visible debe ir dentro de <Text>)
-    TextInput, // Campo para escribir
-    TouchableOpacity, // Botón al que se le puede hacer tap
-    StyleSheet, // Objeto de estilos optimizado para RN
-    KeyboardAvoidingView, // Evita que el teclado tape el formulario (sobre todo iOS)
-    Platform, // Dice si la app corre en 'ios' o 'android'
-    ScrollView, // Permite desplazar el contenido si no cabe en pantalla
-} from 'react-native';
-// Respeta el "notch" y la barra de inicio del teléfono
-import { SafeAreaView } from 'react-native-safe-area-context';
 
-// Mensajes de error como constantes: un solo lugar si quieres cambiar el texto
+import { useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+    View,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    StyleSheet,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { loginUser } from '../api/backend';
+
 const ERR_EMAIL_EMPTY = 'Ingresa tu correo electrónico.';
 const ERR_EMAIL_FORMAT = 'El correo no tiene un formato válido.';
 const ERR_PASSWORD_EMPTY = 'Ingresa tu contraseña.';
 const ERR_CREDENTIALS =
     'Estas credenciales no coinciden con nuestros registros.';
+const SESSION_KEY = 'session_logged_in';
 
-/**
- * Comprueba algo muy básico de correo: que tenga @ y un punto después.
- * (No es perfecto, pero es fácil de leer mientras aprendes.)
- */
 function correoPareceValido(texto: string) {
     if (!texto.includes('@')) return false;
     const despuesArroba = texto.split('@')[1] ?? '';
     return despuesArroba.includes('.');
 }
 
-// "export default" = este archivo exporta UN componente principal
 export default function Login() {
-    // Navegación: <any> es un atajo de TypeScript mientras aprendes;
-    // más adelante se puede tipar bien con los tipos de React Navigation.
     const navigation = useNavigation<any>();
 
-    // useState(valorInicial) devuelve [valorActual, funciónParaCambiarlo]
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [emailError, setEmailError] = useState('');
     const [passwordError, setPasswordError] = useState('');
+    const [loading, setLoading] = useState(false);
 
-    // Si hay mensaje bajo el correo → el input se ve "con error"
     const emailInvalid = emailError !== '';
 
-    // Borde rojo en contraseña si falta, O si el login falló (mensaje va bajo el correo)
     const passwordInvalid =
         passwordError !== '' || emailError === ERR_CREDENTIALS;
 
@@ -55,8 +47,7 @@ export default function Login() {
         setPasswordError('');
     }
 
-    function handleLogin() {
-        // Limpiamos errores viejos antes de volver a validar
+    async function handleLogin() {
         setEmailError('');
         setPasswordError('');
 
@@ -64,7 +55,7 @@ export default function Login() {
 
         if (trimmedEmail === '') {
             setEmailError(ERR_EMAIL_EMPTY);
-            return; // Salimos: no sigue el resto de la función
+            return;
         }
         if (!correoPareceValido(trimmedEmail)) {
             setEmailError(ERR_EMAIL_FORMAT);
@@ -75,17 +66,33 @@ export default function Login() {
             return;
         }
 
-        // Login de prueba (luego aquí iría una API o Firebase, etc.)
-        if (trimmedEmail === 'admin@gmail.com' && password === 'admin') {
-            navigation.navigate('Home');
-        } else {
-            setEmailError(ERR_CREDENTIALS);
+        setLoading(true);
+        try {
+            await loginUser(trimmedEmail, password);
+            await AsyncStorage.setItem(SESSION_KEY, '1');
+            navigation.reset({
+                index: 0,
+                routes: [{ name: 'Home' }],
+            });
+        } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            if (
+                msg.includes('Network request failed') ||
+                msg.includes('Failed to fetch')
+            ) {
+                setEmailError(
+                    'No hay conexión con el servidor. Revisa que el backend esté activo.'
+                );
+            } else {
+                setEmailError(ERR_CREDENTIALS);
+            }
+        } finally {
+            setLoading(false);
         }
     }
 
     return (
         <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-            {/* Círculos de decoración de fondo (no son interactivos) */}
             <View style={styles.ambientTop} />
             <View style={styles.ambientBottom} />
 
@@ -110,10 +117,8 @@ export default function Login() {
                     </View>
 
                     <View style={styles.card}>
-                        {/* Bloque correo: etiqueta + input + texto de error opcional */}
                         <View style={styles.fieldBlock}>
                             <Text style={styles.label}>Correo electrónico</Text>
-                            {/* style en array: combina estilos. Si emailInvalid, suma inputError */}
                             <TextInput
                                 value={email}
                                 onChangeText={(nuevoTexto) => {
@@ -130,7 +135,6 @@ export default function Login() {
                                 autoCapitalize="none"
                                 autoCorrect={false}
                             />
-                            {/* Mostrar error solo si emailError no es '' */}
                             {emailError !== '' ? (
                                 <Text
                                     style={styles.fieldError}
@@ -170,15 +174,17 @@ export default function Login() {
                         <TouchableOpacity
                             style={styles.button}
                             onPress={handleLogin}
+                            disabled={loading}
                             activeOpacity={0.88}
                         >
-                            <Text style={styles.buttonText}>Iniciar sesión</Text>
+                            <Text style={styles.buttonText}>
+                                {loading ? 'Validando...' : 'Iniciar sesión'}
+                            </Text>
                         </TouchableOpacity>
 
                         <View style={styles.footer}>
                             <Text style={styles.footerText}>
                                 Al continuar, aceptas nuestros{' '}
-                                {/* Text dentro de Text = un "span" con otro estilo */}
                                 <Text style={styles.footerLink}>
                                     Términos y condiciones
                                 </Text>
@@ -314,7 +320,6 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(54, 38, 47, 0.12)',
         borderRadius: 14,
         paddingHorizontal: 16,
-        // En iOS a veces conviene un poco más de padding vertical
         paddingVertical: Platform.OS === 'ios' ? 15 : 13,
         width: '100%',
         fontSize: 16,

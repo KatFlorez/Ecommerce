@@ -6,9 +6,9 @@ function getEnv(name, fallback) {
 
 const pool = mysql.createPool({
   host: getEnv('DB_HOST', '127.0.0.1'),
-  port: Number(getEnv('DB_PORT', '8889')),
+  port: Number(getEnv('DB_PORT', '3306')),
   user: getEnv('DB_USERNAME', 'root'),
-  password: getEnv('DB_PASSWORD', 'root'),
+  password: getEnv('DB_PASSWORD', ''),
   database: getEnv('DB_DATABASE', 'dboEcommerce'),
   waitForConnections: true,
   connectionLimit: 10,
